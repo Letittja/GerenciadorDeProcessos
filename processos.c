@@ -63,17 +63,6 @@ int main(void){
     }
 
     //Ler a primeira linha do arquivo
-    /*VERIFICAÇÃO DO ARQUIVO ANTIGO
-    //Verifica arquivo e se tem o formato esperado, algoritmo e quantum separados por "|"
-    //garantindo que o programa só continue se o cabeçalho do arquivo estiver no formato correto, 
-    //se for diferente de 2, indica que o formato do cabeçalho é inválido, 
-    //e o programa exibe uma mensagem de erro e termina a execução para evitar comportamentos 
-    //inesperados devido a um formato de arquivo incorreto
-    if (fscanf(arquivo, " %31[^|]|%d", algoritmo, &quantum) != 2) {
-        printf("Cabeçalho inválido.\n");
-        fclose(arquivo);
-        return 1;
-    }*/
     //Nova verificação
     if (fscanf(arquivo, " %31[^|]|%d|%15[^|]|%d|%d|%d", 
                algoritmo, &quantum, politica_memoria, 
@@ -84,39 +73,6 @@ int main(void){
     }
 
     //Ler os processos
-    /*LEITURA NO FORMATO ANTIGO
-    //Enquanto o número de processos lidos for menor que o máximo permitido 
-    //e a leitura do arquivo for como esperado(tempo de criação, PID, tempo total de execução e prioridade) == 4,
-    //o programa continua lendo os processos do arquivo, preenchendo a estrutura
-    while (total_processos < MAX_PROCESSOS &&
-        fscanf(arquivo, " M%d|P%9[^|]|%d|%d",
-                &processos[total_processos].tempo_criacao,
-                processos[total_processos].pid,
-                &processos[total_processos].tempo_execucao_total,
-                &processos[total_processos].prioridade) == 4) {
-        //Pega o tempo_restante do processo, que inicialmente é igual ao tempo total de execução, 
-        processos[total_processos].tempo_restante = processos[total_processos].tempo_execucao_total;
-        //e também inicializa o vruntime, o tempo de espera, 
-        processos[total_processos].vruntime = 0.0f;
-        processos[total_processos].tempo_espera = 0;
-        //o tempo de conclusão e o estado de na_cpu para cada processo lido do arquivo,
-        //preparando-os para a simulação dos algoritmos de escalonamento,
-        //onde esses campos serão atualizados conforme os processos são executados e preemptados
-        processos[total_processos].tempo_conclusao = -1;
-        processos[total_processos].na_cpu = 0;
-        // INICIALIZAÇÃO DA MEMÓRIA
-        processos[total_processos].n_paginas_ocupadas = 0; // Começa sem nada na memória
-        processos[total_processos].ponteiro_fifo = 0;      // Começa apontando para a primeira moldura
-       // Laço para iniciar as páginas e tempos de carregamento do processo,
-       // definindo as páginas como -1 para indicar que estão vazias,
-        for (int i = 0; i < MAX_MOLDURAS; i++) {
-            processos[total_processos].paginas[i] = -1;           // -1 significa slot vazio
-            processos[total_processos].tempo_carregamento[i] = 0; // Inicia tempo zerado
-        }
-
-        total_processos++;
-    }*/
-    //Leitua no formato novo
     while (total_processos < MAX_PROCESSOS &&
            fscanf(arquivo, " %d|%9[^|]|%d|%d|%d| ", 
                   &processos[total_processos].tempo_criacao,
@@ -191,9 +147,6 @@ int main(void){
     // Dando início à parte gráfica
     // Chama a tela de abertura colorida e animada
     mostrar_cabecalho_simulador(algoritmo, quantum);
-
-    //printf("Algoritmo: %s | Quantum: %d\n", algoritmo, quantum);
-    //printf("Processos carregados: %d\n\n", total_processos);
 
     // Iniciando a semente para a loteria, garantindo que os resultados sejam diferentes a cada execução do programa, 
     //Para simular a aleatoriedade dos sorteios de bilhetes no algoritmo de loteria

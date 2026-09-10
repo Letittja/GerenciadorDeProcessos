@@ -25,39 +25,6 @@ static int prioridade_efetiva(const Processo *p) {
     }
 }
 
-// Função para imprimir no terminal o estado atual da CPU no tempo atual(t)
-/*static void imprimir_execucao(int tempo, int indice, const Processo processos[]) {
-    if (indice >= 0) {
-        // Se há um processo válido (índice >= 0), mostra quem está rodando
-        printf("t=%d | CPU=P%s | restante=%d\n",
-               tempo, processos[indice].pid, processos[indice].tempo_restante);
-    } else {
-        // Caso não haja processo em execução (índice < 0) não há processos prontos para rodar, então a CPU fica ociosa
-        printf("t=%d | CPU=IDLE\n", tempo);
-    }
-}*/
-
-// Função para imprimir o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto
-/*static void imprimir_relatorio_final(const Processo processos[], int n) {
-    int i;
-
-    printf("\nResumo final:\n");
-    printf("PID\tCriacao\tConclusao\tTurnaround\tTempoPronto\n");
-
-    // Imprime os detalhes de cada processo
-    for (i = 0; i < n; i++) {
-        // O tempo de turnaround é calculado como o tempo de conclusão menos o tempo de criação,
-        // representando o tempo total que o processo levou para ser concluído desde sua criação
-        int turnaround = processos[i].tempo_conclusao - processos[i].tempo_criacao;
-        printf("P%s\t%d\t%d\t\t%d\t\t%d\n",
-               processos[i].pid,
-               processos[i].tempo_criacao,
-               processos[i].tempo_conclusao,
-               turnaround,
-               processos[i].tempo_espera);
-    }
-}*/
-
 /////ALGORITMOS DE ESCALONAMENTO/////
 //Funções auxiliar para organizar a fila por prioridade, deixando O(log N).
 static void trocar_indices(int *a, int *b) {
@@ -125,26 +92,6 @@ static int extrair_max_heap(int heap[], int *tamanho, const Processo processos[]
     return indice_processo; // Retorna o índice do processo com maior prioridade que foi extraído do heap
 }
 
-/*ESSA PARTE DO CÓDIGO FOI DESATIVADO, DANDO LUGAR AO ALGORITMO DE ESCALONAMENTO POR HEAP, ÁRVORE RUBRO NEGRA
-// Função para escolher um processo usando o algoritmo de prioridade
-// Varre os processos prontos e escolhe o que tiver o MAIOR número de prioridade.
-static int escolher_por_prioridade(const Processo processos[], const int pronto[], int n) {
-    int i;
-    int escolhido = -1;
-
-    for (i = 0; i < n; i++) {
-        if (!pronto[i]) { // Se o processo não está pronto, ele é ignorado
-            continue;
-        }
-        // Se for o primeiro processo pronto encontrado ou se tiver prioridade maior que o escolhido atual, ele se torna o novo escolhido
-        if (escolhido < 0 || processos[i].prioridade > processos[escolhido].prioridade) {
-            escolhido = i;
-        }
-    }
-    return escolhido;
-}
-*/
-
 // Função para escolher um processo usando o algoritmo de loteria
 // Sorteia um "bilhete" e percorre a lista até encontrar o processo dono daquele bilhete.
 static int escolher_por_loteria(const Processo processos[], const int pronto[], int n) {
@@ -181,32 +128,6 @@ static int escolher_por_loteria(const Processo processos[], const int pronto[], 
 
     return -1;
 }
-
-/*ESSA PARTE DO CÓDIGO FOI DESATIVADO, DANDO LUGAR AO ALGORITMO DE ESCALONAMENTO POR HEAP, ÁRVORE RUBRO NEGRA
-// Função para escolher um processo usando o algoritmo CFS (Completely Fair Scheduler)
-// CFS: Escolhe o processo que teve o MENOR tempo virtual de execução (vruntime).
-static int escolher_por_cfs(const Processo processos[], const int pronto[], int n) {
-    int i;
-    int escolhido = -1;
-    // Inicializa com o maior valor possível para garantir que
-    // qualquer processo pronto terá um vruntime menor, permitindo que seja escolhido corretamente.
-    float menor_vruntime = FLT_MAX; 
-
-    // Varre os processos prontos e escolhe o que tiver o menor vruntime, 
-    //garantindo uma distribuição justa do tempo de CPU entre os processos,
-    // onde processos que tiveram menos tempo de CPU tendem a ser escolhidos mais frequentemente
-    for (i = 0; i < n; i++) {
-        if (!pronto[i]) {
-            continue;
-        }
-        if (escolhido < 0 || processos[i].vruntime < menor_vruntime) {
-            escolhido = i;
-            menor_vruntime = processos[i].vruntime;
-        }
-    }
-    return escolhido;
-}
-*/
 
 // Função que calcula o número de trocas reais criando um "clone" da memória 
 // para não interferir na simulação da CPU
@@ -359,18 +280,12 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                 }
             // Atualização para puxar as novas estruturas de cada algoritmo
             } else if (politica == POLITICA_PRIORIDADE) {
-                /* ESTRUTURA ANTIGA
-                em_execucao = escolher_por_prioridade(processos, pronto, n);
-                if (em_execucao >= 0) pronto[em_execucao] = 0;*/
                 em_execucao = extrair_max_heap(max_heap_prioridade, &heap_p_tamanho, processos);
             } else if (politica == POLITICA_LOTERIA) {
                 em_execucao = escolher_por_loteria(processos, pronto, n);
                 if (em_execucao >= 0) pronto[em_execucao] = 0;
             } else {
                 em_execucao = extrair_menor_rbtree(&rbtree_cfs);
-                /* ESTRUTURA ANTIGA 
-                em_execucao = escolher_por_cfs(processos, pronto, n);
-                if (em_execucao >= 0) pronto[em_execucao] = 0;*/
             }
             quantum_usado = 0;
         }
@@ -423,87 +338,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         if (politica == POLITICA_CFS) {
             processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
         }
-        /*LÓGICA ANTIGA DE ACESSO À MEMÓRIA, ANTES DA ANIMAÇÃO DA MEMÓRIA
-        //LÓGICA DE ACESSO À MEMÓRIA
-        Processo *p = &processos[em_execucao];
-        // Verifica se o processo ainda tem páginas para acessar na sua lista
-        if (p->acesso_atual < p->total_acessos_sequencia) {
-            //Pega a página que o processo está tentando acessar neste ciclo de CPU, com base na sua sequência de acessos e no índice atual de acesso
-            int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
-            
-            // Prepara o vetor de acessos futuros para o algoritmo ótimo
-            int *futuro = &p->sequencia_acessos[p->acesso_atual + 1];
-            int tamanho_futuro = p->total_acessos_sequencia - (p->acesso_atual + 1);
-
-            // Simulação FIFO
-            if (gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO, NULL, 0) == 1) {
-                total_trocas_fifo++;
-            }
-
-            // Simulação LRU
-            if (gerenciar_acesso(p, pagina_pedida, POLITICA_LRU, NULL, 0) == 1) {
-                total_trocas_lru++;
-            }
-
-            // Simulação NFU
-            if (gerenciar_acesso(p, pagina_pedida, POLITICA_NFU, NULL, 0) == 1) {
-                total_trocas_nfu++;
-            }
-
-            // Simulação Ótimo
-            if (gerenciar_acesso(p, pagina_pedida, POLITICA_OTIMO, futuro, tamanho_futuro) == 1) {
-                total_trocas_otimo++;
-            }
-
-            // Avança o índice para o próximo ciclo de CPU pedir a próxima página
-            p->acesso_atual++;
-        }
-        // CONTABILIZAÇÃO DO TEMPO DE CPU
-        p->tempo_restante--; //O processo gasta 1 unidade de tempo da CPU (Apenas UMA vez)
-        quantum_usado++;//Usou 1 segundo da fatia de tempo (Apenas UMA vez)
-
-        // Matemática do CFS: Processos com maior prioridade ganham menos vruntime
-        if (politica == POLITICA_CFS) {
-            processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
-        }*/
-
-        /*ATUALIZADO PARA GERENCIAMENTO DE MEMÓRIA
-        // Fez 1 segundo de trabalho, então diminui o tempo restante do processo em execução e incrementa o quantum usado
-        processos[em_execucao].tempo_restante--;
-
-        //Verificação de acesso à memória para o processo em execução,
-        if (em_execucao != -1) { // Garante que há alguém na CPU
-            Processo *p = &processos[em_execucao];
-
-            //LÓGICA DE ACESSO À MEMÓRIA
-            // Verifica se o processo ainda tem páginas para acessar na sua lista
-            if (p->acesso_atual < p->total_acessos_sequencia) {
-                
-                int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
-                
-                // Vamos simular para o FIFO (depois você pode trocar ou rodar para o LRU)
-                // O 0 ou 1 retornado indica se houve troca de página (Page Fault)
-                int houve_troca = gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO);
-                
-                if (houve_troca == 1) {
-                    total_trocas_fifo++;
-                }
-                
-                // Avança o índice para que no próximo ciclo de CPU ele peça a próxima página
-                p->acesso_atual++;
-            }
-            p->tempo_restante--; // O processo gasta 1 unidade de tempo da CPU
-            quantum_usado++;
-
-        // Usou 1 segundo da fatia de tempo, então incrementa o quantum usado para controle de quando o processo deve ser preemptado (no case do Round Robin) ou para atualizar o vruntime no CFS
-        quantum_usado++;
-
-        // Matemática do CFS: Processos com maior prioridade ganham menos vruntime, logo voltam pra CPU mais rápido.
-        // No algoritmo CFS, o vruntime é atualizado com base na prioridade efetiva do processo
-        if (politica == POLITICA_CFS) {
-            processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
-        }*/
-
+        
         //5. Atualizar o tempo de espera dos processos prontos, garantindo que apenas os processos 
         //que estão prontos e não em execução tenham seu tempo de espera incrementado, para refletir o tempo que eles passaram esperando na fila para serem executados
         // Incrementar o tempo de espera dos processos que estão prontos, mas não em execução
@@ -512,18 +347,6 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
             if (i == em_execucao || processos[i].tempo_restante <= 0 || processos[i].tempo_criacao > tempo) {
                 continue;
             }
-
-            /*CÓDIGO DESATIVADO
-            if (politica == POLITICA_ALTERNANCIA) {
-                if (em_fila_rr[i]) {
-                    processos[i].tempo_espera++;
-                }
-            } else {
-                if (pronto[i]) {
-                    processos[i].tempo_espera++;
-                }
-            }
-        }*/
 
         //ATUALIZAÇÃO 3. Os processos agora podem estar no array pronto[], na fila_rr, no Max-Heapou na RB-Tree.
         // A forma mais genérica de contar tempo de espera é simplesmente aumentar se ele nasceu e não está na CPU.
@@ -544,13 +367,6 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         } else if (quantum_usado >= quantum) {
             // O processo não terminou, mas atingiu a sua fatia de tempo máxima, então ele deve ser preemptado e colocado de volta na fila (no caso do Round Robin) ou marcado como pronto para os outros algoritmos, para que possa ser escolhido novamente no futuro
             processos[em_execucao].na_cpu = 0;
-            /*CÓDIGO DESATIVADO
-            if (politica == POLITICA_ALTERNANCIA) {
-                push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, em_execucao);
-            } else {
-                // Volta para o estado pronto, permitindo que ele seja escolhido novamente pelos algoritmos de Prioridade, Loteria ou CFS, e marcando como pronto para que eles possam ser considerados na próxima escolha de processo
-                pronto[em_execucao] = 1;
-            }*/
 
             //ATUALIZAÇÃO 4. Reinsere nas estruturas otimizadas
             if (politica == POLITICA_ALTERNANCIA) {
@@ -589,7 +405,6 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     imprimir_relatorio_colorido(processos, n);
     //Imprimindo relatório da memória
     imprimir_relatorio_memoria(total_trocas_fifo, total_trocas_lru, total_trocas_nfu, total_trocas_otimo);
-
 }
 
 //// FUNÇÕES DE INTERFACE PARA CADA ALGORITMO DE ESCALONAMENTO ////

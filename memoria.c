@@ -1,26 +1,5 @@
 #include <stdio.h>
 #include "memoria.h"
-/*Letittja
-FIFO: Gerencie uma fila simples ou apenas um índice circular que aponta para a 
-próxima moldura a ser substituída.
-LRU: Você precisará manter um "timestamp" ou uma lista ordenada. 
-Toda vez que uma página for acessada, atualizeo "tempo" dela. 
-Na hora da troca, percorra as molduras e remova a que tiver o timestamp 
-mais antigo.
-DESENVOLVER O simular_fifo e simular_lru*/
-
-/*Gustavo
-NFU: Deve manter um contador de acessos para cada página presente na memória.
-Ótimo: Este é o mais chatinho. Ele precisa receber o "futuro" da execução 
-(a sequência restante). Para facilitar, ele pode ler a sequência de acessos
- completa no início da simulação e guardá-la em um vetor global de 
- "futuros acessos".
- DESENVOLVER O simular_nfu e simular_otimo*/
-
-/*ATENÇÃO!!! Implementar as funções apenas com um return 0;*/
-
-//Declarando as funções como int para não fazer overhead(excesso de peso)
-//Usar struct nesse caso é desnecessário, já que só precisamos saber se houve ou não troca
 
 //Variável declarada como global e static para saber qual o tempo global da simulação,
 //para atualizar os tempos de carregamento das páginas
@@ -54,7 +33,6 @@ int gerenciar_acesso(Processo *P,int pagina_acessada,int politica,int* sequencia
                 return 0;
             }
     }
-    //printf("Página %d não está na memória do processo %s.\n", pagina_acessada, P->pid);
 
     //Segundo passo: Verificar se está cheio
     //Se cheio ele chama a respectiva politica
@@ -109,8 +87,6 @@ int simular_lru(Processo *P, int pagina_acessada) {
             indice_mais_antigo = i;
         }
     }
-
-    //printf("Memória cheia (LRU). Substituindo página %d (antiga) por %d.\n", P->paginas[indice_mais_antigo], pagina_acessada);
     
     P->paginas[indice_mais_antigo] = pagina_acessada;
     P->tempo_carregamento[indice_mais_antigo] = tempo_global;
@@ -134,9 +110,6 @@ int simular_nfu(
             indice_remover = i;
         }
     }
-
-    //printf("Memória cheia (NFU). Substituindo página %d por %d.\n",
-    //       P->paginas[indice_remover], pagina_acessada);
 
     P->paginas[indice_remover] = pagina_acessada;
     P->contador_nfu[indice_remover] = 1;
@@ -179,9 +152,6 @@ int simular_otimo(
     if (indice_remover == -1) {
         indice_remover = 0;
     }
-
-    //printf("Memória cheia (Ótimo). Substituindo página %d por %d.\n",
-    //       P->paginas[indice_remover], pagina_acessada);
 
     P->paginas[indice_remover] = pagina_acessada;
 
