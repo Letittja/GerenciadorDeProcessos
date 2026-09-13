@@ -6,6 +6,12 @@
 #define MAX_MOLDURAS 50
 #define MAX_ACESSOS 1000
 
+//Novos campos de definição de estado do processo
+#define ESTADO_PRONTO 0
+#define ESTADO_EXECUTANDO 1
+#define ESTADO_BLOQUEADO 2
+#define ESTADO_CONCLUIDO 3
+
 typedef struct {
     char pid[10];
     int tempo_criacao;
@@ -47,9 +53,10 @@ typedef struct {
     int em_uso_atual;
 } DispositivoES;
 
-void escalonar_alternancia(Processo processos[], int n, int quantum);
-void escalonar_prioridade(Processo processos[], int n, int quantum);
-void escalonar_loteria(Processo processos[], int n, int quantum);
-void escalonar_cfs(Processo processos[], int n, int quantum);
+//Atualizado para incluir os dispositivos de saída
+void escalonar_alternancia(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos);
+void escalonar_prioridade(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos);
+void escalonar_loteria(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos);
+void escalonar_cfs(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos);
 
 #endif

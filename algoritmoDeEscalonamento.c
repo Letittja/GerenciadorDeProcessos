@@ -5,13 +5,6 @@
 #include "interface.h"
 #include "rbtree.h"
 #include "memoria.h"
-#include "processos.c"
-
-//Campo de definição de estado do processo
-#define ESTADO_PRONTO 0
-#define ESTADO_EXECUTANDO 1
-#define ESTADO_BLOQUEADO 2
-#define ESTADO_CONCLUIDO 3
 
 // Lista de apelidos que representam números inteiros
 // Ao invés de usar números soltos, usa-se nomes descritivos para cada política de escalonamento, facilitando a leitura e manutenção do código
@@ -197,7 +190,7 @@ static void push_fila_rr(int fila[], int *fim, int *tamanho, int em_fila[], int 
 // Função principal para simular o escalonamento de processos com base na política escolhida
 // Esta função gerencia a passagem do tempo e chama o algoritmo correto para escolher o 
 // próximo processo a ser executado, além de atualizar os tempos de espera e conclusão dos processos
-static void simular(Processo processos[], int n, int quantum, Politica politica) {
+static void simular(Processo processos[], int n, int quantum, Politica politica, DispositivoES dispositivos[], int num_dispositivos_es) {
     int i;
     int tempo = 0;
     int concluidos = 0;
@@ -463,22 +456,22 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
 
 //// FUNÇÕES DE INTERFACE PARA CADA ALGORITMO DE ESCALONAMENTO ////
 // Funções para iniciar a simulação de cada algoritmo de escalonamento, imprimindo o nome do algoritmo e chamando a função de simulação com a política correspondente
-void escalonar_alternancia(Processo processos[], int n, int quantum) {
+void escalonar_alternancia(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos_es) {
     printf("=== Escalonamento: Alternancia Circular (Round Robin) ===\n");
-    simular(processos, n, quantum, POLITICA_ALTERNANCIA);
+    simular(processos, n, quantum, POLITICA_ALTERNANCIA, dispositivos, num_dispositivos_es);
 }
 
-void escalonar_prioridade(Processo processos[], int n, int quantum) {
+void escalonar_prioridade(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos_es) {
     printf("=== Escalonamento: Prioridade ===\n");
-    simular(processos, n, quantum, POLITICA_PRIORIDADE);
+    simular(processos, n, quantum, POLITICA_PRIORIDADE, dispositivos, num_dispositivos_es);
 }
 
-void escalonar_loteria(Processo processos[], int n, int quantum) {
+void escalonar_loteria(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos_es) {
     printf("=== Escalonamento: Loteria ===\n");
-    simular(processos, n, quantum, POLITICA_LOTERIA);
+    simular(processos, n, quantum, POLITICA_LOTERIA, dispositivos, num_dispositivos_es);
 }
 
-void escalonar_cfs(Processo processos[], int n, int quantum) {
+void escalonar_cfs(Processo processos[], int n, int quantum, DispositivoES dispositivos[], int num_dispositivos_es) {
     printf("=== Escalonamento: CFS ===\n");
-    simular(processos, n, quantum, POLITICA_CFS);
+    simular(processos, n, quantum, POLITICA_CFS, dispositivos, num_dispositivos_es);
 }

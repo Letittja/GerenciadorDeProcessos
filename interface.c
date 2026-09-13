@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include "interface.h"
 #include "processos.h"
-#include "algoritmoDeEscalonamento.c"
 
 // Essa lógica garante que a pausa (animação) funcione tanto no Windows quanto no Linux/Mac
 #ifdef _WIN32

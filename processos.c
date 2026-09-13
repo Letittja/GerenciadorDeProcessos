@@ -5,7 +5,6 @@
 #include <time.h>
 #include "processos.h"
 #include "interface.h"
-#include "algoritmoDeEscalonamento.c"
 
 // Função para verificar se duas strings são iguais, ignorando diferenças de maiúsculas e minúsculas, 
 // para facilitar a comparação do nome do algoritmo lido do arquivo com os algoritmos suportados
@@ -173,14 +172,14 @@ int main(void){
     // Chama o algoritmo correspondente
     if (strings_iguais_ignore_case(algoritmo, "Alternancia") ||
         strings_iguais_ignore_case(algoritmo, "RoundRobin")) {
-        escalonar_alternancia(processos, total_processos, quantum);
+        escalonar_alternancia(processos, total_processos, quantum, dispositivos, num_dispositivos_es);
     } else if (strings_iguais_ignore_case(algoritmo, "Prioridade")) {
-        escalonar_prioridade(processos, total_processos, quantum);
+        escalonar_prioridade(processos, total_processos, quantum, dispositivos, num_dispositivos_es);
     } else if (strings_iguais_ignore_case(algoritmo, "Loteria")) {
-        escalonar_loteria(processos, total_processos, quantum);
+        escalonar_loteria(processos, total_processos, quantum, dispositivos, num_dispositivos_es);
     } else if (strings_iguais_ignore_case(algoritmo, "CFS")) {
-        escalonar_cfs(processos, total_processos, quantum);
-    } else {
+        escalonar_cfs(processos, total_processos, quantum, dispositivos, num_dispositivos_es);
+    }else {
         limpar_tela(); // Limpa a tela para mostrar a mensagem de erro de forma mais clara
         printf("Algoritmo desconhecido: %s\n", algoritmo);
         return 1;
