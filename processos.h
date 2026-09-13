@@ -31,6 +31,9 @@ typedef struct {
     //Campos novos para a animação
     int ultima_pagina_pedida;
     int sofreu_page_fault;
+    //Campos para controle de I/O
+    int estado; // 0 = Pronto, 1 = Executando, 2 = Bloqueado (I/O)
+    int tempo_io_restante; // Quanto tempo falta para terminar a operação de I/O
 } Processo;
 
 void escalonar_alternancia(Processo processos[], int n, int quantum);

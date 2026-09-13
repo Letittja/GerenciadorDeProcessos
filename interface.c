@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "interface.h"
 #include "processos.h"
+#include "algoritmoDeEscalonamento.c"
 
 // Essa lógica garante que a pausa (animação) funcione tanto no Windows quanto no Linux/Mac
 #ifdef _WIN32
@@ -44,6 +45,21 @@ void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int 
     printf(CIANO " ALGORITMO EM AÇÃO: " VERDE "%s\n" RESET, nome_algoritmo);
     printf(CIANO " RELOGIO DO SISTEMA: " AMARELO "t = %d\n" RESET, tempo);
     printf(AZUL "=========================================================\n" RESET);
+
+    // Nova função para imprimir status do processo quando estiver aguardando o I/O
+    for (int i = 0; i < n; i++) {
+        if (processos[i].tempo_conclusao != -1) {
+            printf("  P%s: " VERDE "[CONCLUIDO]" RESET " \n", processos[i].pid);
+        } else if (i == indice_cpu) {
+            printf("  P%s: " VERMELHO "[NA CPU]" RESET " \n", processos[i].pid);
+        } else if (processos[i].estado == ESTADO_BLOQUEADO) {
+            printf("  P%s: " AMARELO "[BLOQUEADO]" RESET " (Aguardando I/O: restam %d ciclos)\n", processos[i].pid, processos[i].tempo_io_restante);
+        } else if (processos[i].tempo_criacao <= tempo) {
+            printf("  P%s: " AMARELO "[PRONTO]" RESET " (Aguardando na fila)\n", processos[i].pid);
+        } else {
+            printf("  P%s: " CIANO "[FUTURO]" RESET " (Chega no t=%d)\n", processos[i].pid, processos[i].tempo_criacao);
+        }
+    }
 
     // Mostra o status da CPU
     if (indice_cpu >= 0) {

@@ -6,6 +6,12 @@
 #include "rbtree.h"
 #include "memoria.h"
 
+//Campo de definição de estado do processo
+#define ESTADO_PRONTO 0
+#define ESTADO_EXECUTANDO 1
+#define ESTADO_BLOQUEADO 2
+#define ESTADO_CONCLUIDO 3
+
 // Lista de apelidos que representam números inteiros
 // Ao invés de usar números soltos, usa-se nomes descritivos para cada política de escalonamento, facilitando a leitura e manutenção do código
 typedef enum{
@@ -197,11 +203,15 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     int em_execucao = -1; // -1 = CPU ociosa, ou seja, sem processos em execução
     int quantum_usado = 0;
 
-    //NOVAS VARIÁVEIS PARA A SIMULAÇÃO DE MEMÓRIA
+    //VARIÁVEIS PARA A SIMULAÇÃO DE MEMÓRIA
     int total_trocas_fifo = 0;
     int total_trocas_lru = 0;
     int total_trocas_nfu = 0;
     int total_trocas_otimo = 0;
+
+    //Novas variáveis para controle de I/O
+    int tempo_io_restante[MAX_PROCESSOS] = {0};
+    int estado_processo[MAX_PROCESSOS] = {0};
 
     // Vetor de booleanos para indicar quais 
     //processos estão prontos para execução para Loteria, Prioridade e CFS
@@ -248,6 +258,25 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     //além de imprimir o estado atual da CPU e, ao final, um relatório com os tempos de criação, conclusão,
     // turnaround e tempo em estado pronto de cada processo
     while (concluidos < n) {
+        // 0. Atualizar processos bloqueados em I/O
+        for (i = 0; i < n; i++) {
+            if (processos[i].estado == ESTADO_BLOQUEADO) {
+                processos[i].tempo_io_restante--;
+                if (processos[i].tempo_io_restante <= 0) {
+                    processos[i].estado = ESTADO_PRONTO;
+                    // Retorna para a estrutura de prontos correspondente
+                    if (politica == POLITICA_ALTERNANCIA) {
+                        push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, i);
+                    } else if (politica == POLITICA_PRIORIDADE) {
+                        inserir_max_heap(max_heap_prioridade, &heap_p_tamanho, i, processos);
+                    } else if (politica == POLITICA_CFS) {
+                        inserir_rbtree(&rbtree_cfs, i, processos[i].vruntime);
+                    } else {
+                        pronto[i] = 1;
+                    }
+                }
+            }
+        }
         // 1. Verificar chegadas. Alguém "nasceu" neste exato 'tempo'?
         for (i = 0; i < n; i++) {
             if (processos[i].tempo_criacao == tempo && processos[i].tempo_restante > 0) {
