@@ -5,21 +5,17 @@
 #include <time.h>
 #include "processos.h"
 #include "interface.h"
-
-// Antes era necessário garantir que o quantum fosse positivo para evitar loops infinitos,
-// mas agora isso é tratado diretamente na função de simulação, então essa verificação 
-// foi removida daqui. O quantum é garantido como positivo dentro da função simular(), 
-// onde é realmente necessário para o controle do tempo de execução dos processos.
-//#define MAX_PROCESSOS 100
+#include "algoritmoDeEscalonamento.c"
 
 // Função para verificar se duas strings são iguais, ignorando diferenças de maiúsculas e minúsculas, 
 // para facilitar a comparação do nome do algoritmo lido do arquivo com os algoritmos suportados
 static int strings_iguais_ignore_case(const char *a, const char *b) {
-    while (*a && *b) {// Enquanto ambos os caracteres não forem nulos, compara-os ignorando o caso
-        // Usa tolower para converter ambos os caracteres para minúsculas antes de comparar, 
-        // garantindo que "Alternancia", "alternancia" e "ALTERNANCIA" sejam considerados iguais
-        // Verifica se os caracteres atuais são diferentes, e se forem, retorna 0 (falso),
-        // indicando que as strings não são iguais
+    // Enquanto ambos os caracteres não forem nulos, compara-os ignorando o caso
+    // Usa tolower para converter ambos os caracteres para minúsculas antes de comparar, 
+    // garantindo que "Alternancia", "alternancia" e "ALTERNANCIA" sejam considerados iguais
+    // Verifica se os caracteres atuais são diferentes, e se forem, retorna 0 (falso),
+    // indicando que as strings não são iguais
+    while (*a && *b) {
         if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
             return 0;
         }
@@ -52,6 +48,9 @@ int main(void){
     int tamanho_paginas = 0;
     int percentual_alocacao = 0;
 
+    //Nova variável para dispositivo de saída
+    int num_dispositivos_es = 0;
+
     //Linha dos processos
     Processo processos[MAX_PROCESSOS];
     int total_processos = 0;
@@ -63,18 +62,28 @@ int main(void){
     }
 
     //Ler a primeira linha do arquivo
-    //Nova verificação
-    if (fscanf(arquivo, " %31[^|]|%d|%15[^|]|%d|%d|%d", 
+    //Nova verificação com dispositivos E/S
+    if (fscanf(arquivo, " %31[^|]|%d|%15[^|]|%d|%d|%d|%d", 
                algoritmo, &quantum, politica_memoria, 
-               &tamanho_memoria, &tamanho_paginas, &percentual_alocacao) != 6) {
+               &tamanho_memoria, &tamanho_paginas, &percentual_alocacao, &num_dispositivos_es) != 7) {
         printf("Cabeçalho inválido.\n");
         fclose(arquivo);
         return 1;
     }
 
-    //Ler os processos
+    //Ler os Dispositivos E/S antes de ler os processos, garantindo que eles sejam inicializados corretamente
+    DispositivoES dispositivos[10];
+    for (int i = 0; i < num_dispositivos_es; i++) {
+        char id_str[20];
+        if (fscanf(arquivo, " %19[^|]|%d|%d", id_str, &dispositivos[i].num_usos_simultaneos, &dispositivos[i].tempo_operacao) == 3) {
+            dispositivos[i].id = i;
+            dispositivos[i].em_uso_atual = 0;
+        }
+    }
+
+    //Ler os processos, agora lendo a chance de E/S no final
     while (total_processos < MAX_PROCESSOS &&
-           fscanf(arquivo, " %d|%9[^|]|%d|%d|%d| ", 
+           fscanf(arquivo, " %d|%9[^|]|%d|%d|%d|", 
                   &processos[total_processos].tempo_criacao,
                   processos[total_processos].pid,
                   &processos[total_processos].tempo_execucao_total,
@@ -116,22 +125,31 @@ int main(void){
         // Lê o restante da linha (os números com espaço) até a quebra de linha
         char linha_acessos[2048];
         if (fgets(linha_acessos, sizeof(linha_acessos), arquivo) != NULL) {
-            // O strtok quebra a string toda vez que encontra um espaço ou quebra de linha
+            // O último token da linha após os números de acesso é a chance de E/S
+            // Você pode parsear a string pegando os números e o último valor sendo a chance
             char *token = strtok(linha_acessos, " \r\n");
-            
+            int ult_valor = 0;
+
             // Enquanto houver números na linha, converte (atoi) e guarda no array
             while (token != NULL && processos[total_processos].total_acessos_sequencia < MAX_ACESSOS) {
-                int index = processos[total_processos].total_acessos_sequencia;
-                processos[total_processos].sequencia_acessos[index] = atoi(token);
-                processos[total_processos].total_acessos_sequencia++;
-                
-                token = strtok(NULL, " \r\n"); // Pega o próximo número
+                // Verificar se é um número de acesso ou a chance final
+                // Uma forma simples é ir guardando e o último inteiro antes do fim da linha é a chance_requisitar_es
+                char *next_token = strtok(NULL, " \r\n");
+                if (next_token == NULL) {
+                    processos[total_processos].chance_requisitar_es = atoi(token);
+                } else {
+                    int index = processos[total_processos].total_acessos_sequencia;
+                    processos[total_processos].sequencia_acessos[index] = atoi(token);
+                    processos[total_processos].total_acessos_sequencia++;
+                }
+                token = next_token;
             }
         }
-
+        
+        processos[total_processos].estado = ESTADO_PRONTO;
+        processos[total_processos].tempo_io_restante = 0;
         total_processos++;
     }
-
     fclose(arquivo);
 
     // Verificar se o algoritmo é válido

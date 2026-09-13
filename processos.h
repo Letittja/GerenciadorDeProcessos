@@ -34,7 +34,18 @@ typedef struct {
     //Campos para controle de I/O
     int estado; // 0 = Pronto, 1 = Executando, 2 = Bloqueado (I/O)
     int tempo_io_restante; // Quanto tempo falta para terminar a operação de I/O
+    //Novos campos para dispositivos de saída
+    int chance_requisitar_es; // Lido do final da linha do processo
+    int dispositivo_alvo_es;  // ID do dispositivo que ele está usando/aguardando
 } Processo;
+
+//Nova struct para dispositivos de Saída
+typedef struct {
+    int id;
+    int num_usos_simultaneos;
+    int tempo_operacao;
+    int em_uso_atual;
+} DispositivoES;
 
 void escalonar_alternancia(Processo processos[], int n, int quantum);
 void escalonar_prioridade(Processo processos[], int n, int quantum);

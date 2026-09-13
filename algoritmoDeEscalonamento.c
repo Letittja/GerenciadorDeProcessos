@@ -5,6 +5,7 @@
 #include "interface.h"
 #include "rbtree.h"
 #include "memoria.h"
+#include "processos.c"
 
 //Campo de definição de estado do processo
 #define ESTADO_PRONTO 0
@@ -277,6 +278,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                 }
             }
         }
+
         // 1. Verificar chegadas. Alguém "nasceu" neste exato 'tempo'?
         for (i = 0; i < n; i++) {
             if (processos[i].tempo_criacao == tempo && processos[i].tempo_restante > 0) {
@@ -362,6 +364,29 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         // CONTABILIZAÇÃO DO TEMPO DE CPU
         p->tempo_restante--; 
         quantum_usado++;
+
+        // Nova lógica de sorteio de E/S
+        // Dentro do loop de execução na CPU, após avançar o tempo e acessar a memória:
+        if ((rand() % 100) < p->chance_requisitar_es) {
+            // Sorteia um dispositivo de E/S entre 0 e (num_dispositivos_es - 1)
+            int dev_escolhido = rand() % num_dispositivos_es;
+            
+            // Verifica se há vagas simultâneas no dispositivo
+            if (dispositivos[dev_escolhido].em_uso_atual < dispositivos[dev_escolhido].num_usos_simultaneos) {
+                dispositivos[dev_escolhido].em_uso_atual++;
+                p->estado = ESTADO_BLOQUEADO;
+                p->tempo_io_restante = dispositivos[dev_escolhido].tempo_operacao;
+                p->dispositivo_alvo_es = dev_escolhido;
+            } else {
+                // Entra na fila de espera do dispositivo (pode criar uma flag ou estado de espera de dispositivo)
+                p->estado = ESTADO_BLOQUEADO;
+                p->tempo_io_restante = dispositivos[dev_escolhido].tempo_operacao; // ou aguardar vaga
+            }
+            
+            // O processo sai da CPU imediatamente
+            em_execucao = -1;
+            quantum_usado = 0;
+        }
 
         // Matemática do CFS
         if (politica == POLITICA_CFS) {
