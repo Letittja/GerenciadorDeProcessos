@@ -257,6 +257,12 @@ static void simular(Processo processos[], int n, int quantum, Politica politica,
             if (processos[i].estado == ESTADO_BLOQUEADO) {
                 processos[i].tempo_io_restante--;
                 if (processos[i].tempo_io_restante <= 0) {
+                    // LIBERA A VAGA DO DISPOSITIVO DE E/S
+                    int dev_id = processos[i].dispositivo_alvo_es;
+                    if (dispositivos[dev_id].em_uso_atual > 0) {
+                        dispositivos[dev_id].em_uso_atual--;
+                    }
+
                     processos[i].estado = ESTADO_PRONTO;
                     // Retorna para a estrutura de prontos correspondente
                     if (politica == POLITICA_ALTERNANCIA) {
@@ -307,7 +313,9 @@ static void simular(Processo processos[], int n, int quantum, Politica politica,
                 em_execucao = extrair_max_heap(max_heap_prioridade, &heap_p_tamanho, processos);
             } else if (politica == POLITICA_LOTERIA) {
                 em_execucao = escolher_por_loteria(processos, pronto, n);
-                if (em_execucao >= 0) pronto[em_execucao] = 0;
+                if (em_execucao >= 0) {
+                    pronto[em_execucao] = 0;
+                }
             } else {
                 em_execucao = extrair_menor_rbtree(&rbtree_cfs);
             }
@@ -358,61 +366,50 @@ static void simular(Processo processos[], int n, int quantum, Politica politica,
         p->tempo_restante--; 
         quantum_usado++;
 
-        // Nova lógica de sorteio de E/S
-        // Dentro do loop de execução na CPU, após avançar o tempo e acessar a memória:
-        if ((rand() % 100) < p->chance_requisitar_es) {
-            // Sorteia um dispositivo de E/S entre 0 e (num_dispositivos_es - 1)
-            int dev_escolhido = rand() % num_dispositivos_es;
-            
-            // Verifica se há vagas simultâneas no dispositivo
-            if (dispositivos[dev_escolhido].em_uso_atual < dispositivos[dev_escolhido].num_usos_simultaneos) {
-                dispositivos[dev_escolhido].em_uso_atual++;
-                p->estado = ESTADO_BLOQUEADO;
-                p->tempo_io_restante = dispositivos[dev_escolhido].tempo_operacao;
-                p->dispositivo_alvo_es = dev_escolhido;
-            } else {
-                // Entra na fila de espera do dispositivo (pode criar uma flag ou estado de espera de dispositivo)
-                p->estado = ESTADO_BLOQUEADO;
-                p->tempo_io_restante = dispositivos[dev_escolhido].tempo_operacao; // ou aguardar vaga
-            }
-            
-            // O processo sai da CPU imediatamente
-            em_execucao = -1;
-            quantum_usado = 0;
-        }
+        //BLOCO ADICIONADO NA ULTIMA ATUALIZAÇÃO
+        //Se o processo terminou, conclui imediatamente e não deixa ele pedir E/S. 
+        //Só depois disso, se ainda tiver tempo restante, sorteia E/S.
+        // Primeiro verifica se o processo terminou depois de usar a CPU
+        if (p->tempo_restante == 0) {
+            // O processo terminou sua execução, então registra o tempo de conclusão
+            p->tempo_conclusao = tempo + 1;
+            p->na_cpu = 0;
+            p->estado = ESTADO_CONCLUIDO;
 
-        // Matemática do CFS
-        if (politica == POLITICA_CFS) {
-            processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
-        }
-        
-        //5. Atualizar o tempo de espera dos processos prontos, garantindo que apenas os processos 
-        //que estão prontos e não em execução tenham seu tempo de espera incrementado, para refletir o tempo que eles passaram esperando na fila para serem executados
-        // Incrementar o tempo de espera dos processos que estão prontos, mas não em execução
-        for (i = 0; i < n; i++) {
-            // Se for o processo atual, se já terminou ou se ainda não nasceu, ignora.
-            if (i == em_execucao || processos[i].tempo_restante <= 0 || processos[i].tempo_criacao > tempo) {
-                continue;
-            }
-
-        //ATUALIZAÇÃO 3. Os processos agora podem estar no array pronto[], na fila_rr, no Max-Heapou na RB-Tree.
-        // A forma mais genérica de contar tempo de espera é simplesmente aumentar se ele nasceu e não está na CPU.
-        // O IF original abaixo funcionava apenas para as estruturas antigas. Simplificamos a contagem geral.
-        processos[i].tempo_espera = processos[i].tempo_espera +  1; // Incrementa o tempo de espera para todos os processos que nasceram e não estão na CPU, independentemente da estrutura de dados usada para gerenciar os processos prontos, garantindo que o tempo de espera seja contabilizado corretamente para todos os processos, mesmo com as novas estruturas de dados implementadas para cada algoritmo de escalonamento
-        }
-
-        //6. Condições de saída da CPU: Verificar se o processo em execução foi concluído ou se o quantum foi esgotado, para decidir se ele deve ser removido da CPU e, no caso do Round Robin, colocado de volta na fila para esperar sua próxima vez de execução
-        // Verificar se o processo em execução foi concluído ou se o quantum foi esgotado
-        if (processos[em_execucao].tempo_restante == 0) {
-            // O processo terminou sua execução, então registra o tempo de conclusão, marca que ele não está mais na CPU, e incrementa o contador de processos concluídos
-            processos[em_execucao].tempo_conclusao = tempo + 1;
-            processos[em_execucao].na_cpu = 0;
-            // Libera a CPU, permitindo que um novo processo seja escolhido no próximo ciclo de simulação
+            // Libera a CPU, permitindo que um novo processo seja escolhido no próximo ciclo
             em_execucao = -1;
             quantum_usado = 0;
             concluidos++;
-        } else if (quantum_usado >= quantum) {
-            // O processo não terminou, mas atingiu a sua fatia de tempo máxima, então ele deve ser preemptado e colocado de volta na fila (no caso do Round Robin) ou marcado como pronto para os outros algoritmos, para que possa ser escolhido novamente no futuro
+        } else {
+
+            // Nova lógica de sorteio de E/S
+            // Dentro do loop de execução na CPU, após avançar o tempo e acessar a memória:
+            if ((rand() % 100) < p->chance_requisitar_es) {
+                // Sorteia um dispositivo de E/S entre 0 e (num_dispositivos_es - 1)
+                int dev_escolhido = rand() % num_dispositivos_es;
+                
+                // Verifica se há vagas simultâneas no dispositivo
+                if (dispositivos[dev_escolhido].em_uso_atual < dispositivos[dev_escolhido].num_usos_simultaneos) {
+                    dispositivos[dev_escolhido].em_uso_atual++;
+                    p->estado = ESTADO_BLOQUEADO;
+                    p->tempo_io_restante = dispositivos[dev_escolhido].tempo_operacao;
+                    p->dispositivo_alvo_es = dev_escolhido;
+                    
+                    // O processo sai da CPU imediatamente para ir ao I/O
+                    p->na_cpu = 0;                
+                    em_execucao = -1;
+                    quantum_usado = 0;
+                } // Se o dispositivo estiver cheio, não fazemos nada (o processo continua na CPU)
+            }
+
+        // Matemática do CFS
+        if (em_execucao >= 0 && politica == POLITICA_CFS) {
+        processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
+        }
+
+        // Verifica se o quantum foi esgotado apenas se o processo ainda estiver na CPU
+        if (em_execucao >= 0 && quantum_usado >= quantum) {
+            // O processo não terminou, mas atingiu sua fatia de tempo máxima
             processos[em_execucao].na_cpu = 0;
 
             //ATUALIZAÇÃO 4. Reinsere nas estruturas otimizadas
@@ -431,9 +428,21 @@ static void simular(Processo processos[], int n, int quantum, Politica politica,
             em_execucao = -1;
             quantum_usado = 0;
         }
-        // O ciclo termina, então avança o tempo para a próxima unidade de tempo, onde pode haver novos processos chegando ou prontos para execução, e o processo em execução pode continuar ou ser preemptado dependendo do algoritmo de escalonamento e do quantum
-        tempo++;
+        
     }
+    // 5. Atualizar o tempo de espera dos processos prontos
+    for (i = 0; i < n; i++) {
+        if (i == em_execucao || processos[i].tempo_restante <= 0 || processos[i].tempo_criacao > tempo) {
+            continue;
+        }
+
+        if (processos[i].estado == ESTADO_PRONTO) {
+            processos[i].tempo_espera = processos[i].tempo_espera + 1;
+        }
+    }
+    // O ciclo termina, então avança o tempo para a próxima unidade de tempo, onde pode haver novos processos chegando ou prontos para execução, e o processo em execução pode continuar ou ser preemptado dependendo do algoritmo de escalonamento e do quantum
+    tempo++;
+}
 
     //Libera a memória da Árvore Rubro-Negra para evitar Memory Leak (vazamento de memória)
     if (politica == POLITICA_CFS) {
