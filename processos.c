@@ -77,6 +77,10 @@ int main(void){
         if (fscanf(arquivo, " %19[^|]|%d|%d", id_str, &dispositivos[i].num_usos_simultaneos, &dispositivos[i].tempo_operacao) == 3) {
             dispositivos[i].id = i;
             dispositivos[i].em_uso_atual = 0;
+            //Adição de campos para a fila de espera para dispositivo cheio
+            dispositivos[i].inicio_fila = 0;
+            dispositivos[i].fim_fila = 0;
+            dispositivos[i].tamanho_fila = 0;
         }
     }
 

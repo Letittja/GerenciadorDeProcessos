@@ -186,6 +186,29 @@ static void push_fila_rr(int fila[], int *fim, int *tamanho, int em_fila[], int 
     em_fila[indice] = 1;
 }
 
+//Função auxiliar para espera para criar fila de espera para dispositivo cheio
+static void entrar_fila_dispositivo(DispositivoES *dispositivo, int indice_processo) {
+    if (dispositivo->tamanho_fila >= MAX_PROCESSOS) {
+        return;
+    }
+
+    dispositivo->fila_espera[dispositivo->fim_fila] = indice_processo;
+    dispositivo->fim_fila = (dispositivo->fim_fila + 1) % MAX_PROCESSOS;
+    dispositivo->tamanho_fila++;
+}
+
+static int sair_fila_dispositivo(DispositivoES *dispositivo) {
+    if (dispositivo->tamanho_fila <= 0) {
+        return -1;
+    }
+
+    int indice_processo = dispositivo->fila_espera[dispositivo->inicio_fila];
+    dispositivo->inicio_fila = (dispositivo->inicio_fila + 1) % MAX_PROCESSOS;
+    dispositivo->tamanho_fila--;
+
+    return indice_processo;
+}
+
 //// FUNÇÃO DE SIMULAÇÃO PRINCIPAL ////
 // Função principal para simular o escalonamento de processos com base na política escolhida
 // Esta função gerencia a passagem do tempo e chama o algoritmo correto para escolher o 
@@ -399,7 +422,19 @@ static void simular(Processo processos[], int n, int quantum, Politica politica,
                     p->na_cpu = 0;                
                     em_execucao = -1;
                     quantum_usado = 0;
-                } // Se o dispositivo estiver cheio, não fazemos nada (o processo continua na CPU)
+                // Se o dispositivo estiver cheio, coloque o processo na fila:
+                } else {
+                    p->estado = ESTADO_BLOQUEADO;
+                    p->dispositivo_alvo_es = dev_escolhido;
+                    p->tempo_io_restante = 0;
+
+                    entrar_fila_dispositivo(&dispositivos[dev_escolhido], em_execucao);
+
+                    p->na_cpu = 0;
+                    em_execucao = -1;
+                    quantum_usado = 0;
+                } 
+                
             }
 
         // Matemática do CFS

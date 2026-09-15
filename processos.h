@@ -51,6 +51,12 @@ typedef struct {
     int num_usos_simultaneos;
     int tempo_operacao;
     int em_uso_atual;
+
+    //Adição de fila de espera para dispositivo cheio
+    int fila_espera[MAX_PROCESSOS];
+    int inicio_fila;
+    int fim_fila;
+    int tamanho_fila;
 } DispositivoES;
 
 //Atualizado para incluir os dispositivos de saída
